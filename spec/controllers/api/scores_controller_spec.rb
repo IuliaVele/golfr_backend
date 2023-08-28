@@ -104,4 +104,26 @@ describe Api::ScoresController, type: :request do
       expect(Score.count).to eq score_count
     end
   end
+
+  describe 'GET user_scores' do
+    it 'should return the scores related to the user' do
+      @user = create(:user, name: 'User', email: 'user7@email.com', password: 'userpass')
+
+      sign_in(@user, scope: :user)
+
+      @score1 = create(:score, user: @user, total_score: 79, played_at: '2021-05-20')
+      @score2 = create(:score, user: @user, total_score: 59, played_at: '2021-05-25')
+
+      get api_golfers_path(user_id: @user.id)
+
+      expect(response).to have_http_status(:ok)
+      response_hash = JSON.parse(response.body)
+      scores = response_hash['scores']
+
+      expect(scores.count).to eq 2
+      expect(scores[1]['user_name']).to eq 'User'
+      expect(scores[1]['total_score']).to eq 79
+      expect(scores[1]['played_at']).to eq '2021-05-20'
+    end
+  end
 end
