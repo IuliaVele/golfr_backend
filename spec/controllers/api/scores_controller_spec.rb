@@ -3,12 +3,12 @@ require 'rails_helper'
 describe Api::ScoresController, type: :request do
   before :each do
     @user1 = create(:user, name: 'User1', email: 'user1@email.com', password: 'userpass')
-    user2 = create(:user, name: 'User2', email: 'user2@email.com', password: 'userpass')
+    @user2 = create(:user, name: 'User2', email: 'user2@email.com', password: 'userpass')
     sign_in(@user1, scope: :user)
 
     @score1 = create(:score, user: @user1, total_score: 79, played_at: '2021-05-20')
-    @score2 = create(:score, user: user2, total_score: 99, played_at: '2021-06-20')
-    @score3 = create(:score, user: user2, total_score: 68, played_at: '2021-06-13')
+    @score2 = create(:score, user: @user2, total_score: 99, played_at: '2021-06-20')
+    @score3 = create(:score, user: @user2, total_score: 68, played_at: '2021-06-13')
   end
 
   describe 'GET feed' do
@@ -106,24 +106,36 @@ describe Api::ScoresController, type: :request do
   end
 
   describe 'GET user_scores' do
-    it 'should return the scores related to the user' do
-      @user = create(:user, name: 'User', email: 'user7@email.com', password: 'userpass')
+    it 'should return the scores related to logged in user' do
+      @score1 = create(:score, user: @user1, total_score: 79, played_at: '2021-05-20')
+      @score2 = create(:score, user: @user1, total_score: 59, played_at: '2021-05-25')
 
-      sign_in(@user, scope: :user)
-
-      @score1 = create(:score, user: @user, total_score: 79, played_at: '2021-05-20')
-      @score2 = create(:score, user: @user, total_score: 59, played_at: '2021-05-25')
-
-      get api_golfers_path(user_id: @user.id)
+      get api_golfers_path(user_id: @user1.id)
 
       expect(response).to have_http_status(:ok)
       response_hash = JSON.parse(response.body)
       scores = response_hash['scores']
 
-      expect(scores.count).to eq 2
-      expect(scores[1]['user_name']).to eq 'User'
+      expect(scores.count).to eq 3 # two from this test and one from the before each block
+      expect(scores[1]['user_name']).to eq 'User1'
       expect(scores[1]['total_score']).to eq 79
       expect(scores[1]['played_at']).to eq '2021-05-20'
+    end
+
+    it 'should return the scores related to another user' do
+      @score1 = create(:score, user: @user2, total_score: 79, played_at: '2021-05-20')
+      @score2 = create(:score, user: @user2, total_score: 59, played_at: '2021-05-25')
+
+      get api_golfers_path(user_id: @user2.id)
+
+      expect(response).to have_http_status(:ok)
+      response_hash = JSON.parse(response.body)
+      scores = response_hash['scores']
+
+      expect(scores.count).to eq 4 # two from this test and two from the before each block
+      expect(scores[1]['user_name']).to eq 'User2'
+      expect(scores[1]['total_score']).to eq 68
+      expect(scores[1]['played_at']).to eq '2021-06-13'
     end
   end
 end
